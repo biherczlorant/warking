@@ -8,8 +8,6 @@ typedef struct {
   bool valid;
 } gps_data_t;
 
-void gps_parse_init(void);
-void gps_parse_process(void);
-void gps_get_data(gps_data_t *out);
+void gps_init(void);
 
 #endif //__GPS_H__

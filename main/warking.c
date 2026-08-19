@@ -1,5 +1,5 @@
 #include "esp_log.h"
-#include "gps_driver.h"
+#include "gps.h"
 #include "wifi.h"
 
 #include "nvs_flash.h"
@@ -8,14 +8,9 @@
 static const char *TAG = "main";
 
 void main_task(void *arg) {
-  uint8_t buf[1024] = {0};
   while (1) {
     wifi_scan();
-    gps_driver_read(buf, 1024);
-
-    ESP_LOGI(TAG, "%s", buf);
-
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
   }
 }
 
@@ -28,8 +23,8 @@ void app_main(void) {
   }
   ESP_ERROR_CHECK(ret);
   wifi_init();
-  gps_driver_init();
+  gps_init();
 
-  xTaskCreate(main_task, "main_task", configMINIMAL_STACK_SIZE * 4, NULL, 5,
+  xTaskCreate(main_task, "main_task", configMINIMAL_STACK_SIZE * 4, NULL, 4,
               NULL);
 }

@@ -2,8 +2,9 @@
 #define __GPS_DRIVER_H__
 
 #include <stdint.h>
+#include <freertos/FreeRTOS.h>
 
 void gps_driver_init(void);
-int gps_driver_read(uint8_t *out, int len);
+QueueHandle_t gps_driver_get_gps_queue(void);
 
 #endif // __GPS_DRIVER_H__

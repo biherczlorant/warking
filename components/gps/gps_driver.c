@@ -76,8 +76,8 @@ void gps_driver_init(void) {
   ESP_ERROR_CHECK(
       uart_set_pin(uart_num, 1, 3, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
   ESP_ERROR_CHECK(uart_driver_install(uart_num, 512, 0, 16, &uart_queue, 0));
-  uart_enable_pattern_det_baud_intr(uart_num, '\n', 1, 9, 0, 0);
-  uart_pattern_queue_reset(uart_num, 16);
+  ESP_ERROR_CHECK(uart_enable_pattern_det_baud_intr(uart_num, '\n', 1, 9, 0, 0));
+  ESP_ERROR_CHECK(uart_pattern_queue_reset(uart_num, 16));
   uart_flush(uart_num);
 
   gps_queue = xQueueCreate(8, 128);

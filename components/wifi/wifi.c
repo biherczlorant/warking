@@ -40,12 +40,6 @@ void wifi_scan(void) {
   ESP_LOGI(TAG, "Total APs scanned = %u, actual AP number ap_info holds = %u",
            ap_count, number);
 
-  // for (int i = 0; i < number; i++) {
-  //   ESP_LOGD(TAG, "SSID \t\t%s", ap_info[i].ssid);
-  //   ESP_LOGD(TAG, "RSSI \t\t%d", ap_info[i].rssi);
-  //   ESP_LOGD(TAG, "Channel \t\t%d", ap_info[i].primary);
-  // }
-
   memcpy(s_last_scan_ap_info, ap_info, sizeof(ap_info));
   s_last_scan_count = number;
 }

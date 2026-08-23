@@ -39,21 +39,46 @@ jobs:
           idf_size_out=$(du -h build/${{ env.PROJECT_NAME }}.elf | cut -f1)
           echo "Built ELF size: $idf_size_out"
 
-      - name: Fix compile_commands.json paths for cppcheck
+- name: Scope compile_commands.json to own code
         if: hashFiles('build/compile_commands.json') != ''
         run: |
           sed -i "s#/app/${GITHUB_REPOSITORY}#${GITHUB_WORKSPACE}#g" build/compile_commands.json
+
           python3 - <<'EOF'
           import json, os
+
           path = "build/compile_commands.json"
+          workspace = os.environ["GITHUB_WORKSPACE"]
+
+          # Only lint files under our own main/ and components/ trees.
+          # This excludes managed_components/ (lvgl, esp_lvgl_port, etc.)
+          # and the ESP-IDF framework itself, which we don't own/control.
+          allowed_prefixes = [
+              os.path.join(workspace, "main"),
+              os.path.join(workspace, "components"),
+          ]
+          excluded_substrings = ["managed_components"]
+
           with open(path) as f:
               entries = json.load(f)
-          kept = [e for e in entries if os.path.exists(e.get("file", ""))]
+
+          def keep(entry):
+              file_path = entry.get("file", "")
+              if not os.path.exists(file_path):
+                  return False
+              if not any(file_path.startswith(p) for p in allowed_prefixes):
+                  return False
+              if any(sub in file_path for sub in excluded_substrings):
+                  return False
+              return True
+
+          kept = [e for e in entries if keep(e)]
+          print(f"Kept {len(kept)} of {len(entries)} compile_commands.json entries")
           with open(path, "w") as f:
               json.dump(kept, f)
           EOF
 
-      - name: Static checks (cppcheck, using real build config)
+      - name: Static checks
         run: |
           sudo apt-get update -y
           sudo apt-get install -y cppcheck

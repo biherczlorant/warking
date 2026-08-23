@@ -1,0 +1,127 @@
+name: Build, Check, and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+env:
+  IDF_TARGET: esp32c3
+  IDF_VERSION: v6.0.1
+  PROJECT_NAME: warking
+
+jobs:
+  build:
+    name: Build firmware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ env.IDF_VERSION }}
+          target: ${{ env.IDF_TARGET }}
+          path: '.'
+
+      - name: Fix build directory ownership
+        run: sudo chown -R $(id -u):$(id -g) build/
+
+      - name: Verify build artifacts exist
+        run: |
+          test -f build/${{ env.PROJECT_NAME }}.elf || (echo "ELF not found!" && exit 1)
+          idf_size_out=$(du -h build/${{ env.PROJECT_NAME }}.elf | cut -f1)
+          echo "Built ELF size: $idf_size_out"
+
+      - name: Scope compile_commands.json to own code
+        if: hashFiles('build/compile_commands.json') != ''
+        run: |
+          sed -i "s#/app/${GITHUB_REPOSITORY}#${GITHUB_WORKSPACE}#g" build/compile_commands.json
+
+          python3 - <<'EOF'
+          import json, os
+
+          path = "build/compile_commands.json"
+          workspace = os.environ["GITHUB_WORKSPACE"]
+
+          # Only lint files under our own main/ and components/ trees.
+          # This excludes managed_components/ (lvgl, esp_lvgl_port, etc.)
+          # and the ESP-IDF framework itself, which we don't own/control.
+          allowed_prefixes = [
+              os.path.join(workspace, "main"),
+              os.path.join(workspace, "components"),
+          ]
+          excluded_substrings = ["managed_components"]
+
+          with open(path) as f:
+              entries = json.load(f)
+
+          def keep(entry):
+              file_path = entry.get("file", "")
+              if not os.path.exists(file_path):
+                  return False
+              if not any(file_path.startswith(p) for p in allowed_prefixes):
+                  return False
+              if any(sub in file_path for sub in excluded_substrings):
+                  return False
+              return True
+
+          kept = [e for e in entries if keep(e)]
+          print(f"Kept {len(kept)} of {len(entries)} compile_commands.json entries")
+          with open(path, "w") as f:
+              json.dump(kept, f)
+          EOF
+
+      - name: Static checks
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cppcheck
+          if [ -f build/compile_commands.json ]; then
+            cppcheck --enable=warning,performance,portability \
+                      --error-exitcode=1 \
+                      --suppress=missingIncludeSystem \
+                      --suppress='*:*/managed_components/*' \
+                      --suppress='*:managed_components/*' \
+                      --suppress='*:*/esp-idf/*' \
+                      --inline-suppr \
+                      --project=build/compile_commands.json 2>cppcheck.log || (cat cppcheck.log && exit 1)
+          else
+            echo "compile_commands.json not found, skipping cppcheck (build succeeded, so this is non-fatal)"
+          fi
+
+      - name: Rename ELF with version/commit tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          cp build/${{ env.PROJECT_NAME }}.elf build/${{ env.PROJECT_NAME }}-${SHORT_SHA}.elf
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-firmware
+          path: |
+            build/${{ env.PROJECT_NAME }}.elf
+            build/${{ env.PROJECT_NAME }}.bin
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/${{ env.PROJECT_NAME }}.elf
+            build/${{ env.PROJECT_NAME }}.bin
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -30,11 +30,42 @@ jobs:
           target: ${{ env.IDF_TARGET }}
           path: '.'
 
+      - name: Fix build directory ownership
+        run: sudo chown -R $(id -u):$(id -g) build/
+
       - name: Verify build artifacts exist
         run: |
           test -f build/${{ env.PROJECT_NAME }}.elf || (echo "ELF not found!" && exit 1)
           idf_size_out=$(du -h build/${{ env.PROJECT_NAME }}.elf | cut -f1)
           echo "Built ELF size: $idf_size_out"
+
+      - name: Fix compile_commands.json paths for cppcheck
+        if: hashFiles('build/compile_commands.json') != ''
+        run: |
+          sed -i "s#/app/${GITHUB_REPOSITORY}#${GITHUB_WORKSPACE}#g" build/compile_commands.json
+          python3 - <<'EOF'
+          import json, os
+          path = "build/compile_commands.json"
+          with open(path) as f:
+              entries = json.load(f)
+          kept = [e for e in entries if os.path.exists(e.get("file", ""))]
+          with open(path, "w") as f:
+              json.dump(kept, f)
+          EOF
+
+      - name: Static checks (cppcheck, using real build config)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cppcheck
+          if [ -f build/compile_commands.json ]; then
+            cppcheck --enable=warning,performance,portability \
+                      --error-exitcode=1 \
+                      --suppress=missingIncludeSystem \
+                      --inline-suppr \
+                      --project=build/compile_commands.json 2>cppcheck.log || (cat cppcheck.log && exit 1)
+          else
+            echo "compile_commands.json not found, skipping cppcheck (build succeeded, so this is non-fatal)"
+          fi
 
       - name: Rename ELF with version/commit tag
         run: |

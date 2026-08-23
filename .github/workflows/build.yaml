@@ -39,7 +39,7 @@ jobs:
           idf_size_out=$(du -h build/${{ env.PROJECT_NAME }}.elf | cut -f1)
           echo "Built ELF size: $idf_size_out"
 
-- name: Scope compile_commands.json to own code
+      - name: Scope compile_commands.json to own code
         if: hashFiles('build/compile_commands.json') != ''
         run: |
           sed -i "s#/app/${GITHUB_REPOSITORY}#${GITHUB_WORKSPACE}#g" build/compile_commands.json

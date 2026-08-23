@@ -86,6 +86,9 @@ jobs:
             cppcheck --enable=warning,performance,portability \
                       --error-exitcode=1 \
                       --suppress=missingIncludeSystem \
+                      --suppress='*:*/managed_components/*' \
+                      --suppress='*:managed_components/*' \
+                      --suppress='*:*/esp-idf/*' \
                       --inline-suppr \
                       --project=build/compile_commands.json 2>cppcheck.log || (cat cppcheck.log && exit 1)
           else

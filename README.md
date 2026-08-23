@@ -5,7 +5,9 @@
 
 ESP32-C3 portable wardriving device with GPS logging, an SSD1306 display, and WiGLE-compatible CSV export to SD card.
 
-![Demo](docs/demo.gif)
+<p align="center">
+  <img src="docs/demo.gif">
+</p>
 
 ## Overview
 
@@ -45,6 +47,6 @@ The on-device UI is built with [SquareLine Studio](https://squareline.io/) and L
 
 ## TODO
 
-- [ Make the UI fancier ]
-- [ Design a PCB ]
-- [ Distance calculation fix ]
+- [ ] Make the UI fancier
+- [ ] Design a PCB
+- [ ] Distance calculation fix

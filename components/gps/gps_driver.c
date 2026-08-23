@@ -2,6 +2,7 @@
 
 #include "driver/uart.h"
 #include "esp_err.h"
+#include "esp_log.h"
 #include <freertos/FreeRTOS.h>
 
 const uart_port_t uart_num = UART_NUM_1;
@@ -76,7 +77,8 @@ void gps_driver_init(void) {
   ESP_ERROR_CHECK(
       uart_set_pin(uart_num, 1, 3, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
   ESP_ERROR_CHECK(uart_driver_install(uart_num, 512, 0, 16, &uart_queue, 0));
-  ESP_ERROR_CHECK(uart_enable_pattern_det_baud_intr(uart_num, '\n', 1, 9, 0, 0));
+  ESP_ERROR_CHECK(
+      uart_enable_pattern_det_baud_intr(uart_num, '\n', 1, 9, 0, 0));
   ESP_ERROR_CHECK(uart_pattern_queue_reset(uart_num, 16));
   uart_flush(uart_num);
 

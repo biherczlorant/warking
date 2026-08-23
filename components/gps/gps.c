@@ -4,6 +4,7 @@
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <math.h>
+#include <stdbool.h>
 #include <string.h>
 
 static const char *TAG = "gps";
@@ -28,7 +29,7 @@ static double gps_haversine_m(double lat1, double lon1, double lat2,
   return R * c;
 }
 
-float gps_get_distance_km(void) { return (float)(s_distance_m / 1000.0); }
+float gps_get_distance_km(void) { return ((float)(distance_m / 1000.0)); }
 
 static double gps_nmea_to_decimal_longitude(const char *nmea_lon,
                                             char direction) {
@@ -84,7 +85,8 @@ static void gps_process_line(char *line) {
       fields[count++] = token;
     }
     if ((atoi(fields[6])) > 0) {
-      curr_gps.valid = false; // TODO: change this, dont only set valid to rmc msgs because naming is confusing
+      curr_gps.valid = false; // TODO: change this, dont only set valid to rmc
+                              // msgs because naming is confusing
       curr_gps.latitude = gps_nmea_to_decimal_latitude(fields[2], *fields[3]);
       curr_gps.longitude = gps_nmea_to_decimal_longitude(fields[4], *fields[5]);
       curr_gps.hdop = atof(fields[8]);

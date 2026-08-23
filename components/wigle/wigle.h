@@ -2,6 +2,7 @@
 #define __WIGLE_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct {
   char line[256];

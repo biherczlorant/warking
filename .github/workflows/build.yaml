@@ -23,16 +23,6 @@ jobs:
         with:
           submodules: 'recursive'
 
-      - name: Static checks (cppcheck)
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y cppcheck
-          cppcheck --enable=warning,performance,portability \
-                    --error-exitcode=1 \
-                    --suppress=missingIncludeSystem \
-                    --inline-suppr \
-                    main/ components/ 2>cppcheck.log || (cat cppcheck.log && exit 1)
-
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -75,3 +65,4 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

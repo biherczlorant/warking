@@ -9,8 +9,6 @@
 #include "nvs_flash.h"
 #include <freertos/FreeRTOS.h>
 
-static const char *TAG = "main";
-
 void main_task(void *arg) {
   while (1) {
     wifi_scan();
